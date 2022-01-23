@@ -13,5 +13,8 @@ func init() {
 
 func main() {
 	js.Global().Set("generateKeyPair", js.FuncOf(ethscrow.GenerateKeyPair))
+	js.Global().Set("sign", js.FuncOf(ethscrow.Sign))
+	js.Global().Set("encrypt", js.FuncOf(ethscrow.Encrypt))
+	js.Global().Set("decrypt", js.FuncOf(ethscrow.Decrypt))
 	select {}
 }
