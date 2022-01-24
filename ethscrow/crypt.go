@@ -11,13 +11,14 @@ import (
 	"syscall/js"
 )
 
-func encodeToString(arr []byte) string {
+func encodeToHexString(arr []byte) string {
 	return hex.EncodeToString(arr)
 }
 
-func decodeToString(s string) []byte {
+func decodeToHex(s string) []byte {
 	arr, err := hex.DecodeString(s)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 	return arr
@@ -42,16 +43,17 @@ func GenerateKeyPair(this js.Value, args []js.Value) interface{} {
 
 	return js.ValueOf(
 		map[string]interface{}{
-			"privateKey": encodeToString(privKeyBytes),
-			"publicKey":  encodeToString(pubKeyBytes),
+			"privateKey": encodeToHexString(privKeyBytes),
+			"publicKey":  encodeToHexString(pubKeyBytes),
 		})
 }
 
 func getPrivateKey(key string) *ecdsa.PrivateKey {
-	privateKeyHex := decodeToString(key)
+	privateKeyHex := decodeToHex(key)
 
 	privateKey, err := x509.ParsePKCS8PrivateKey(privateKeyHex)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -59,10 +61,11 @@ func getPrivateKey(key string) *ecdsa.PrivateKey {
 }
 
 func getPublicKey(key string) *ecdsa.PublicKey {
-	publicKeyHex := decodeToString(key)
+	publicKeyHex := decodeToHex(key)
 
 	publicKey, err := x509.ParsePKIXPublicKey(publicKeyHex)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -71,16 +74,17 @@ func getPublicKey(key string) *ecdsa.PublicKey {
 
 func Sign(this js.Value, args []js.Value) interface{} {
 	privateKey := getPrivateKey(args[0].String())
-	data := args[1].String()
+	data, err := hex.DecodeString(args[1].String())
 
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, []byte(data))
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, data)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
 	return js.ValueOf(map[string]interface{}{
-		"r": r.String(),
-		"s": s.String(),
+		"r": encodeToHexString(r.Bytes()),
+		"s": encodeToHexString(s.Bytes()),
 	})
 }
 
@@ -89,6 +93,7 @@ func Encrypt(this js.Value, args []js.Value) interface{} {
 
 	k, err := rand.Int(rand.Reader, new(big.Int).SetBytes([]byte("FFFFFFFFFFFF")))
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
