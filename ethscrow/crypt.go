@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	eth "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"syscall/js"
 )
@@ -117,4 +118,46 @@ func Decrypt(this js.Value, args []js.Value) interface{} {
 	msg, _ := privateKey.Curve.Add(c2x, c2y, subX, new(big.Int).Neg(subY))
 
 	return js.ValueOf(msg.String())
+}
+
+func GenerateThreshold(this js.Value, args []js.Value) interface{} {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	x, y := privateKey.ScalarBaseMult(privateKey.D.Bytes())
+
+	return js.ValueOf(map[string]interface{}{
+		"x": encodeToHexString(x.Bytes()),
+		"y": encodeToHexString(y.Bytes()),
+	})
+}
+
+func GenerateEscrowAddress(this js.Value, args []js.Value) interface{} {
+	aX, aY := decodeToHex(args[0].String()), decodeToHex(args[1].String())
+	bX, bY := decodeToHex(args[2].String()), decodeToHex(args[3].String())
+
+	x, y := elliptic.P256().Add(
+		new(big.Int).SetBytes(aX),
+		new(big.Int).SetBytes(aY),
+		new(big.Int).SetBytes(bX),
+		new(big.Int).SetBytes(bY),
+	)
+
+	key := &ecdsa.PublicKey{
+		X:     x,
+		Y:     y,
+		Curve: elliptic.P256(),
+	}
+
+	return js.ValueOf(eth.PubkeyToAddress(*key).Hex())
+}
+
+func GenerateEscrowPrivateKey(this js.Value, args []js.Value) interface{} {
+	aD, bD := decodeToHex(args[0].String()), decodeToHex(args[1].String())
+	private := new(big.Int).Add(new(big.Int).SetBytes(aD), new(big.Int).SetBytes(bD))
+
+	return js.ValueOf(encodeToHexString(private.Bytes()))
 }

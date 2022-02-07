@@ -16,5 +16,8 @@ func main() {
 	js.Global().Set("sign", js.FuncOf(ethscrow.Sign))
 	js.Global().Set("encrypt", js.FuncOf(ethscrow.Encrypt))
 	js.Global().Set("decrypt", js.FuncOf(ethscrow.Decrypt))
+	js.Global().Set("generateThresholdKey", js.FuncOf(ethscrow.GenerateThreshold))
+	js.Global().Set("generateEscrowAddress", js.FuncOf(ethscrow.GenerateEscrowAddress))
+	js.Global().Set("generateEscrowPrivateKey", js.FuncOf(ethscrow.GenerateEscrowPrivateKey))
 	select {}
 }
