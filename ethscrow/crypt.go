@@ -130,8 +130,9 @@ func GenerateThreshold(this js.Value, args []js.Value) interface{} {
 	x, y := privateKey.ScalarBaseMult(privateKey.D.Bytes())
 
 	return js.ValueOf(map[string]interface{}{
-		"x": encodeToHexString(x.Bytes()),
-		"y": encodeToHexString(y.Bytes()),
+		"privateShare": encodeToHexString(privateKey.D.Bytes()),
+		"publicShareX": encodeToHexString(x.Bytes()),
+		"publicShareY": encodeToHexString(y.Bytes()),
 	})
 }
 
