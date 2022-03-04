@@ -75,7 +75,7 @@ func getPublicKey(key string) *ecdsa.PublicKey {
 
 func Sign(this js.Value, args []js.Value) interface{} {
 	privateKey := getPrivateKey(args[0].String())
-	data, err := hex.DecodeString(args[1].String())
+	data := decodeToHex(args[1].String())
 
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, data)
 	if err != nil {
@@ -91,6 +91,7 @@ func Sign(this js.Value, args []js.Value) interface{} {
 
 func Encrypt(this js.Value, args []js.Value) interface{} {
 	publicKey := getPublicKey(args[0].String())
+	data := decodeToHex(args[1].String())
 
 	k, err := rand.Int(rand.Reader, new(big.Int).SetBytes([]byte("FFFFFFFFFFFF")))
 	if err != nil {
@@ -98,26 +99,28 @@ func Encrypt(this js.Value, args []js.Value) interface{} {
 		return nil
 	}
 
-	c2x, c2y := publicKey.Curve.ScalarMult(publicKey.X, publicKey.Y, publicKey.Curve.Params().Gx.Bytes())
+	c2xHalf, c2yHalf := publicKey.Curve.ScalarMult(publicKey.X, publicKey.Y, k.Bytes())
 	c1x, c1y := publicKey.Curve.ScalarBaseMult(k.Bytes())
+	c2x, c2y := publicKey.Curve.Add(new(big.Int).SetBytes(data), new(big.Int).SetInt64(0), c2xHalf, c2yHalf)
 
 	return js.ValueOf(map[string]interface{}{
-		"c1": elliptic.Marshal(publicKey.Curve, c1x, c1y),
-		"c2": elliptic.Marshal(publicKey.Curve, c2x, c2y),
+		"c1x": encodeToHexString(c1x.Bytes()),
+		"c1y": encodeToHexString(c1y.Bytes()),
+		"c2x": encodeToHexString(c2x.Bytes()),
+		"c2y": encodeToHexString(c2y.Bytes()),
 	})
 }
 
 func Decrypt(this js.Value, args []js.Value) interface{} {
 	privateKey := getPrivateKey(args[0].String())
-
-	c1x, c1y := elliptic.Unmarshal(privateKey.Curve, []byte(args[1].String()))
-	c2x, c2y := elliptic.Unmarshal(privateKey.Curve, []byte(args[2].String()))
+	c1x, c1y := new(big.Int).SetBytes(decodeToHex(args[1].String())), new(big.Int).SetBytes(decodeToHex(args[2].String()))
+	c2x, c2y := new(big.Int).SetBytes(decodeToHex(args[3].String())), new(big.Int).SetBytes(decodeToHex(args[4].String()))
 
 	subX, subY := privateKey.Curve.ScalarMult(c1x, c1y, privateKey.D.Bytes())
 
 	msg, _ := privateKey.Curve.Add(c2x, c2y, subX, new(big.Int).Neg(subY))
 
-	return js.ValueOf(msg.String())
+	return js.ValueOf(encodeToHexString(msg.Bytes()))
 }
 
 func GenerateThreshold(this js.Value, args []js.Value) interface{} {
