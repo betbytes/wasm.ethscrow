@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	eth "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"syscall/js"
@@ -164,4 +165,28 @@ func GenerateEscrowPrivateKey(this js.Value, args []js.Value) interface{} {
 	private := new(big.Int).Add(new(big.Int).SetBytes(aD), new(big.Int).SetBytes(bD))
 
 	return js.ValueOf(encodeToHexString(private.Bytes()))
+}
+
+func SignEthTx(this js.Value, args []js.Value) interface{} {
+	tx := new(types.Transaction)
+	err := tx.UnmarshalJSON([]byte(args[0].String()))
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	privateKey, _ := eth.HexToECDSA(args[2].String())
+
+	//&ecdsa.PrivateKey{
+	//	D: new(big.Int).SetBytes(decodeToHex(args[2].String())),
+	//}
+
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(new(big.Int).SetInt64(int64(args[1].Int()))), privateKey)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	signedTxJson, err := signedTx.MarshalJSON()
+
+	return js.ValueOf(string(signedTxJson))
 }
