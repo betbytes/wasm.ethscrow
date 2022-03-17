@@ -132,23 +132,23 @@ func GenerateThreshold(this js.Value, args []js.Value) interface{} {
 		return nil
 	}
 
-	privInt := new(big.Int).SetBytes(privateKey.D.Bytes())
+	x := new(big.Int).SetBytes(privateKey.D.Bytes())
 	xG := []int64{privateKey.PublicKey.X.Int64(), privateKey.PublicKey.Y.Int64()}
 	G := []int64{privateKey.Curve.Params().Gx.Int64(), privateKey.Curve.Params().Gy.Int64()}
 
 	v, _ := rand.Int(rand.Reader, new(big.Int).Sub(eth.S256().Params().N, new(big.Int).SetInt64(1)))
 	vx, vy := privateKey.Curve.ScalarBaseMult(v.Bytes())
-	h := md5.Sum([]byte(fmt.Sprintf("%v%v%v", G, privInt.Int64(), xG)))
+
+	chal := fmt.Sprintf("%v%v%v", G, v.Int64(), xG)
+	h := md5.Sum([]byte(chal))
 
 	c := new(big.Int).SetBytes(h[:])
-	r := new(big.Int).Mod(new(big.Int).Sub(v, new(big.Int).Mul(c, privInt)), privateKey.Curve.Params().N)
-
-	x, y := privateKey.ScalarBaseMult(privateKey.D.Bytes())
+	r := new(big.Int).Mod(new(big.Int).Sub(v, new(big.Int).Mul(c, x)), privateKey.Curve.Params().N)
 
 	return js.ValueOf(map[string]interface{}{
 		"privateShare": encodeToHexString(privateKey.D.Bytes()),
-		"publicShareX": encodeToHexString(x.Bytes()),
-		"publicShareY": encodeToHexString(y.Bytes()),
+		"publicShareX": encodeToHexString(privateKey.PublicKey.X.Bytes()),
+		"publicShareY": encodeToHexString(privateKey.PublicKey.Y.Bytes()),
 		"c":            encodeToHexString(c.Bytes()),
 		"r":            encodeToHexString(r.Bytes()),
 		"vGx":          encodeToHexString(vx.Bytes()),
@@ -159,21 +159,21 @@ func GenerateThreshold(this js.Value, args []js.Value) interface{} {
 func GenerateEscrowAddress(this js.Value, args []js.Value) interface{} {
 	aX, aY := decodeToHex(args[0].String()), decodeToHex(args[1].String())
 	bX, bY := decodeToHex(args[2].String()), decodeToHex(args[3].String())
-	//c := decodeToHex(args[4].String())
-	//r := decodeToHex(args[5].String())
-	//vGx, vGy := decodeToHex(args[6].String()), decodeToHex(args[7].String())
-	//
+	c := decodeToHex(args[4].String())
+	r := decodeToHex(args[5].String())
+	vGx, vGy := decodeToHex(args[6].String()), decodeToHex(args[7].String())
+
 	bxInt, byInt := new(big.Int).SetBytes(bX), new(big.Int).SetBytes(bY)
-	//
-	//rGx, rGy := eth.S256().ScalarBaseMult(r)
-	//cxG, cyG := eth.S256().ScalarMult(bxInt, byInt, c)
-	//vCheckx, vChecky := eth.S256().Add(rGx, rGy, cxG, cyG)
+
+	rGx, rGy := eth.S256().ScalarBaseMult(r)
+	cxG, cyG := eth.S256().ScalarMult(bxInt, byInt, c)
+	vCheckx, vChecky := eth.S256().Add(rGx, rGy, cxG, cyG)
 
 	// TODO: Fix zkp
-	//if vCheckx.Cmp(new(big.Int).SetBytes(vGx)) != 0 && vChecky.Cmp(new(big.Int).SetBytes(vGy)) != 0 {
-	//	fmt.Println("The other user doesn't have the correct private key.")
-	//	return js.ValueOf(nil)
-	//}
+	if vCheckx.Cmp(new(big.Int).SetBytes(vGx)) != 0 || vChecky.Cmp(new(big.Int).SetBytes(vGy)) != 0 {
+		fmt.Println("The other user doesn't have the correct private key.")
+		return js.ValueOf(nil)
+	}
 
 	x, y := eth.S256().Add(
 		new(big.Int).SetBytes(aX),
