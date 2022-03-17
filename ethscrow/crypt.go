@@ -169,7 +169,6 @@ func GenerateEscrowAddress(this js.Value, args []js.Value) interface{} {
 	cxG, cyG := eth.S256().ScalarMult(bxInt, byInt, c)
 	vCheckx, vChecky := eth.S256().Add(rGx, rGy, cxG, cyG)
 
-	// TODO: Fix zkp
 	if vCheckx.Cmp(new(big.Int).SetBytes(vGx)) != 0 || vChecky.Cmp(new(big.Int).SetBytes(vGy)) != 0 {
 		fmt.Println("The other user doesn't have the correct private key.")
 		return js.ValueOf(nil)
